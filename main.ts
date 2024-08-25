@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.140.0/http/server.ts";
 
-
 // Encryption library (you may need to find a suitable one for Deno)
-import { RSA } from "https://deno.land/x/encryption_lib/mod.ts";
+import { RSA } from "https://deno.land/x/encryption_lib@0.1.4/mod.ts";
 
 // Environment variables
 const PASSWORD = Deno.env.get("PASSWORD");
