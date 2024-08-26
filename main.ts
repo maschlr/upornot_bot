@@ -8,7 +8,7 @@ const encryptedJson = await Deno.readTextFile(ENCRYPTED_FILE);
 const decryptedJson = await decrypt(encryptedJson, PASSWORD as string);
 const config: Record<string, Record<string, string | number>> = JSON.parse(decryptedJson);
 
-const BOT_TOKEN = Deno.env.get("BOT_TOKEN");;
+const BOT_TOKEN = Deno.env.get("BOT_TOKEN");
 
 const botOnlineStatus: Record<string, boolean> = {};
 for (const bot_name of Object.keys(config)) {
@@ -31,10 +31,11 @@ async function sendTelegramMessage(message: string, channel_id: number) {
 }
 
 async function checkOtherBots() {
-  for (const [bot_name, { bot_token, channel_id }] of Object.entries(config)) {
-    const response = await fetch(`https://api.telegram.org/bot${bot_token}/getMe`);
+  for (const [bot_name, { webhook_url, channel_id }] of Object.entries(config)) {
+    const response = await fetch(webhook_url as string, {method: "POST"});
     const wasOnline = botOnlineStatus[bot_name];
-    let isOtherBotOnline = response.ok;
+    // should get 403 forbidden if bot is online since we are not using the webhook secret
+    const isOtherBotOnline = response.status === 403;
     botOnlineStatus[bot_name] = isOtherBotOnline;
     try {
       if (!wasOnline && isOtherBotOnline) {
@@ -45,7 +46,7 @@ async function checkOtherBots() {
     } catch (error) {
       console.error("Error checking other bot:", error);
       if (isOtherBotOnline) {
-        isOtherBotOnline = false;
+        botOnlineStatus[bot_name] = false;
         await sendTelegramMessage(`💔 Error checking bot ${bot_name} (error: ${error})`, channel_id as number);
       }
     }

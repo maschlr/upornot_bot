@@ -1,8 +1,8 @@
 # UpOrNot Bot
 
-A simple bot that checks whether other bots are online and sends a message to a channel if they are not.
+A simple bot that checks whether other bots are online using the webhook url and sends a message to a channel if they are not (or back online).
 
-Since this check involves the bot tokens of the bots that are being checked, the bot tokens are encrypted and stored in a file that is part of the repository. Storing encrypted data in a public repository could be a security risk. Do this at your own risk.
+Since this check involves the webhook urls of the bots that are being checked, the bot tokens are encrypted and stored in a file that is part of the repository. Even if data is properly encrypted, when stored in a public repository that could be a security risk. Do this at your own risk.
 
 The purpose of this repository is to be forked. Create your own `config.json` file, add your bot tokens and the channel ids where the health message will be send to.
 
@@ -25,16 +25,16 @@ Create your own health check bot, using [BotFather](https://t.me/botfather) and 
 ```json
 {
     <BOT_NAME_1>: {
-        bot_token: <BOT_TOKEN_1>,
+        webhook_url: <BOT_WEBHOOK_URL_1>,
         channel_id: <MESSAGE_CHANNEL_ID_1>
     },
     <BOT_NAME_2>: {
-        bot_token: <BOT_TOKEN_2>,
+        webhook_url: <BOT_WEBHOOK_URL_2>,
         channel_id: <MESSAGE_CHANNEL_ID_2>
     },
     ...
     <BOT_NAME_N>: {
-        bot_token: <BOT_TOKEN_N>,
+        webhook_url: <BOT_WEBHOOK_URL_N>,
         channel_id: <MESSAGE_CHANNEL_ID_N>
     }
 }
