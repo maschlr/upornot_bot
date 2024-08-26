@@ -1,0 +1,8 @@
+repos:
+- repo: local
+  hooks:
+  - id: encrypt-config
+    name: Encrypt Config File
+    entry: deno run --allow-all encrypt-config.ts
+    language: system
+    pass_filenames: false
