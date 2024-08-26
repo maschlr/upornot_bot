@@ -27,10 +27,9 @@ try {
     console.log(`${ENCRYPTED_FILE} has been staged for commit`);
   } else {
     console.error(`Failed to stage ${ENCRYPTED_FILE}`);
-    Deno.exit(1);
+    throw new Error(`Failed to stage ${ENCRYPTED_FILE}`);   
   }
 
 } catch (error) {
-  console.error("Error during encryption:", error);
-  Deno.exit(1);
+  throw new Error(`Error during encryption: ${error}`);
 }

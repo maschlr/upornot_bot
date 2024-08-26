@@ -3,8 +3,7 @@ import "jsr:@std/dotenv/load";
 
 export const PASSWORD = Deno.env.get("PASSWORD");
 if (PASSWORD === undefined) {
-    console.error("ENCRYPTION_PASSWORD environment variable is not set");
-    Deno.exit(1);
+    throw new Error("ENCRYPTION_PASSWORD environment variable is not set");
 }
 
 export const ENCRYPTED_FILE = "./encrypted_config.txt";
