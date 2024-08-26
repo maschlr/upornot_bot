@@ -38,15 +38,15 @@ async function checkOtherBots() {
     botOnlineStatus[bot_name] = isOtherBotOnline;
     try {
       if (!wasOnline && isOtherBotOnline) {
-        await sendTelegramMessage("Bot is back online!", channel_id as number);
+        await sendTelegramMessage(`🥳 Bot ${bot_name} is back online!`, channel_id as number);
       } else if (wasOnline && !isOtherBotOnline) {
-        await sendTelegramMessage("Bot is offline!", channel_id as number);
+        await sendTelegramMessage(`💔 Bot ${bot_name} is offline!`, channel_id as number);
       }
     } catch (error) {
       console.error("Error checking other bot:", error);
       if (isOtherBotOnline) {
         isOtherBotOnline = false;
-        await sendTelegramMessage(`Error checking bot (error: ${error}`, channel_id as number);
+        await sendTelegramMessage(`💔 Error checking bot ${bot_name} (error: ${error})`, channel_id as number);
       }
     }
   }
