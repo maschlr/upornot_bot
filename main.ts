@@ -32,10 +32,10 @@ async function sendTelegramMessage(message: string, channel_id: number) {
 
 async function checkOtherBots() {
   for (const [bot_name, { webhook_url, channel_id }] of Object.entries(config)) {
-    const response = await fetch(webhook_url as string, {method: "POST"});
+    const response = await fetch(webhook_url as string);
     const wasOnline = botOnlineStatus[bot_name];
-    // should get 403 forbidden if bot is online since we are not using the webhook secret
-    const isOtherBotOnline = response.status === 403;
+    // should get 405 method not allowed (GET)
+    const isOtherBotOnline = response.status === 405;
     botOnlineStatus[bot_name] = isOtherBotOnline;
     try {
       if (!wasOnline && isOtherBotOnline) {
