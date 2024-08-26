@@ -21,11 +21,21 @@ Create your own health check bot, using [BotFather](https://t.me/botfather) and 
 ## Configuration
 
 `config.json`:
+
 ```json
 {
-    <OTHER_BOT_TOKEN_1>: <MESSAGE_CHANNEL_ID_1>,
-    <OTHER_BOT_TOKEN_2>: <MESSAGE_CHANNEL_ID_2>,
+    <BOT_NAME_1>: {
+        bot_token: <BOT_TOKEN_1>,
+        channel_id: <MESSAGE_CHANNEL_ID_1>
+    },
+    <BOT_NAME_2>: {
+        bot_token: <BOT_TOKEN_2>,
+        channel_id: <MESSAGE_CHANNEL_ID_2>
+    },
     ...
-    <OTHER_BOT_TOKEN_N>: <MESSAGE_CHANNEL_ID_N>
+    <BOT_NAME_N>: {
+        bot_token: <BOT_TOKEN_N>,
+        channel_id: <MESSAGE_CHANNEL_ID_N>
+    }
 }
 ```
