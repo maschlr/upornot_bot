@@ -2,7 +2,7 @@
 import "jsr:@std/dotenv/load";
 
 export const PASSWORD = Deno.env.get("PASSWORD");
-if (PASSWORD === undefined) {
+if (!PASSWORD) {
     throw new Error("PASSWORD environment variable is not set");
 }
 
