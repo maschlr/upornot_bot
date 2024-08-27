@@ -61,14 +61,16 @@ bot.command("list", async (ctx) => {
 
   for await (const entry of webhooks) {
     const webhook = entry.value as { url: string };
-    const statusEntry = await kv.get(["status", ctx.chat.id, webhook.url]);
-    const status = statusEntry.value as boolean | undefined;
+    
+    // Run health check
+    const isOnline = await isWebhookOnline(webhook.url);
+    await kv.set(["status", ctx.chat.id, webhook.url], isOnline);
 
     let statusEmoji;
-    if (status === undefined) {
-      statusEmoji = "⚪"; // White circle for undefined (no check yet)
+    if (isOnline) {
+      statusEmoji = "🟢"; // Green for online
     } else {
-      statusEmoji = status ? "🟢" : "🔴"; // Green for online, red for offline
+      statusEmoji = "🔴"; // Red for offline
     }
 
     message += `${statusEmoji} ${webhook.url}\n`;
