@@ -123,7 +123,7 @@ async function checkOtherBots() {
     } else if (wasOnline && !isOnline) {
       await bot.api.sendMessage(
         chatId as number,
-        `�� Bot ${String(webhookUrl)} is offline!`,
+        `💀 Bot ${String(webhookUrl)} is offline!`,
       );
     }
   }
