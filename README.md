@@ -1,41 +1,12 @@
 # UpOrNot Bot
 
-A simple bot that checks whether other bots are online using the webhook url and sends a message to a channel if they are not (or back online).
+A simple bot that periodically checks (every 5 minutes) whether bots are online using the webhook url and sends a message to a channel if the online status has changed (online -> offline or offline -> online).
 
-Since this check involves the webhook urls of the bots that are being checked, the bot tokens are encrypted and stored in a file that is part of the repository. Even if data is properly encrypted, when stored in a public repository that could be a security risk. Do this at your own risk.
+You're invited to use the instance I run on telegram: [UpOrNotBot](https://t.me/upornot_bot).
 
-The purpose of this repository is to be forked. Create your own `config.json` file, add your bot tokens and the channel ids where the health message will be send to.
-
-Create your own health check bot, using [BotFather](https://t.me/botfather) and add the bot token to the `config.json` file.
-
-## Installation
+## How to run your own instance
 
 1. Fork this repository
-2. `pip install pre-commit` (needed to automatically encrypt the `config.json` file before committing)
-3. `pre-commit install` (installs the pre-commit hook)
-4. Create your own `config.json` file
-5. Store your encryption password and the bot token of your health check bot in the `.env` file
-6. Use free [deno deploy](https://docs.deno.com/deploy/manual/) to host your bot
-7. Store the same environment variables on deno deploy
-
-## Configuration
-
-`config.json`:
-
-```json
-{
-    <BOT_NAME_1>: {
-        webhook_url: <BOT_WEBHOOK_URL_1>,
-        channel_id: <MESSAGE_CHANNEL_ID_1>
-    },
-    <BOT_NAME_2>: {
-        webhook_url: <BOT_WEBHOOK_URL_2>,
-        channel_id: <MESSAGE_CHANNEL_ID_2>
-    },
-    ...
-    <BOT_NAME_N>: {
-        webhook_url: <BOT_WEBHOOK_URL_N>,
-        channel_id: <MESSAGE_CHANNEL_ID_N>
-    }
-}
-```
+2. Create your own UpOrNot bot instance, using [BotFather](https://t.me/botfather).
+3. Use free [deno deploy](https://docs.deno.com/deploy/manual/) to host your bot
+4. Store `BOT_TOKEN` in the deno deploy secrets

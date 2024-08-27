@@ -1,19 +1,27 @@
 import {
   Bot,
   Context,
-  InlineKeyboard,
   webhookCallback,
 } from "https://deno.land/x/grammy/mod.ts";
+import { type TextMessage } from "https://deno.land/x/grammy/types.ts";
 import "https://deno.land/x/dotenv/load.ts";
 
 const BOT_TOKEN = Deno.env.get("BOT_TOKEN");
 if (!BOT_TOKEN) {
-  console.error("BOT_TOKEN is not set in the environment variables");
-  Deno.exit(1);
+  throw new Error("BOT_TOKEN is not set");
 }
 
 const bot = new Bot(BOT_TOKEN);
 const kv = await Deno.openKv();
+
+interface ChatData {
+  webhooks: [{ webhookUrl: string; name: string }];
+}
+
+interface WebhookData {
+  isOnline: boolean;
+  chats: number[];
+}
 
 // Helper function to check if a webhook is online
 async function isWebhookOnline(url: string): Promise<boolean> {
@@ -27,54 +35,110 @@ async function isWebhookOnline(url: string): Promise<boolean> {
 
 // Command handlers
 bot.command("start", async (ctx: Context) => {
-  const keyboard = new InlineKeyboard()
-    .text("Add Webhook", "/add")
-    .text("List Webhooks", "/list")
-    .text("Delete Webhook", "/del");
-
   await ctx.reply(
-    "Welcome! I can help you manage your webhooks. Use the buttons below or type commands:",
-    { reply_markup: keyboard },
+    "Welcome! I can help you monitor the online status of your bots. The following commands are available: /add, /list and /del",
   );
 });
+
 bot.command("add", async (ctx: Context) => {
-  const webhookUrl = ctx.match as string;
-  if (!webhookUrl) {
-    await ctx.reply("Please provide a webhook URL. Usage: /add <webhook_url>");
+  const [webhookUrlInput, name] = (ctx.match as string).split(" ");
+  if (!webhookUrlInput) {
+    await ctx.reply(
+      "Please provide a webhook URL. Usage: /add <webhook_url> [name]",
+    );
     return;
-  }
-  if (ctx.chat && await isWebhookOnline(webhookUrl)) {
-    await kv.set(["webhooks", ctx.chat.id, webhookUrl], { url: webhookUrl });
-    await kv.set(["status", ctx.chat.id, webhookUrl], true);
-    await ctx.reply("Webhook added successfully");
   } else if (!ctx.chat) {
     await ctx.reply("Error: Unable to process your request.");
-  } else {
+    return;
+  }
+  const isOnline = await isWebhookOnline(webhookUrlInput);
+  if (!isOnline) {
     await ctx.reply("The provided webhook is not online or invalid");
+    return;
+  }
+
+  // if user inputs url with http:// or http(s)://, remove it (normalize)
+  let webhookUrl: string;
+  try {
+    const url = new URL(webhookUrlInput);
+    webhookUrl = `${url.hostname}${url.pathname}`;
+  } catch {
+    webhookUrl = webhookUrlInput;
+  }
+  const webhookKey = ["webhooks", webhookUrl];
+  const existingWebhookData = await kv.get(webhookKey);
+  if (!existingWebhookData.value) {
+    // add new webhook
+    const newWebhookData: WebhookData = {
+      isOnline: false,
+      chats: [ctx.chat.id],
+    };
+    await kv.set(webhookKey, newWebhookData);
+  } else {
+    // add chat_id to existing webhook
+    const typedValue = existingWebhookData.value as WebhookData;
+    typedValue.chats.push(ctx.chat.id);
+    await kv.set(webhookKey, typedValue);
+  }
+
+  const chatsKey = ["chats", ctx.chat.id];
+  const existingChatsData = await kv.get(chatsKey);
+  if (existingChatsData.value) {
+    const typedValue = existingChatsData.value as ChatData;
+    const webhooksInChat = typedValue.webhooks.filter((webhook) =>
+      webhook.webhookUrl === webhookUrl
+    );
+    if (webhooksInChat.length > 0) {
+      await ctx.reply(
+        "Webhook already configured for this chat. Use /list to see your webhooks or /del to delete them.",
+      );
+      return;
+    } else {
+      typedValue.webhooks.push({
+        webhookUrl: webhookUrl,
+        name: name || webhookUrl,
+      });
+      await kv.set(chatsKey, typedValue);
+      await ctx.reply("Webhook added successfully");
+    }
+  } else {
+    const newChatsData: ChatData = {
+      webhooks: [{ webhookUrl: webhookUrl, name: name || webhookUrl }],
+    };
+    await kv.set(chatsKey, newChatsData);
+    await ctx.reply("Webhook added successfully");
   }
 });
 
 bot.command("list", async (ctx) => {
-  const webhooks = kv.list({ prefix: ["webhooks", ctx.chat.id] });
-  let message = "Registered webhooks:\n";
+  const chatsKey = ["chats", ctx.chat.id];
+  const existingChatsData = await kv.get(chatsKey);
+  if (!existingChatsData.value) {
+    await ctx.reply("You have no registered webhooks.");
+    return;
+  }
+  const typedValue = existingChatsData.value as ChatData;
+
   let count = 0;
-
-  for await (const entry of webhooks) {
-    const webhook = entry.value as { url: string };
-    
-    // Run health check
-    const isOnline = await isWebhookOnline(webhook.url);
-    await kv.set(["status", ctx.chat.id, webhook.url], isOnline);
-
-    let statusEmoji;
-    if (isOnline) {
-      statusEmoji = "🟢"; // Green for online
+  let message = "Registered webhooks:\n";
+  for (const webhook of typedValue.webhooks) {
+    const { webhookUrl, name } = webhook;
+    const webhookQueryResult = await kv.get(["webhooks", webhookUrl]);
+    const webhookData = webhookQueryResult.value as WebhookData;
+    const wasOnline = webhookData.isOnline;
+    const isOnline = await isWebhookOnline(webhookUrl);
+    const statusEmoji = isOnline ? "🟢" : "🔴";
+    if (name === webhookUrl) {
+      message += `${statusEmoji} ${name}\n`;
     } else {
-      statusEmoji = "🔴"; // Red for offline
+      message += `${statusEmoji} ${name} (@${webhookUrl})\n`;
     }
-
-    message += `${statusEmoji} ${webhook.url}\n`;
     count++;
+
+    if (wasOnline !== isOnline) {
+      webhookData.isOnline = isOnline;
+      await kv.set(["webhooks", webhookUrl], webhookData);
+    }
   }
 
   if (count === 0) {
@@ -93,14 +157,42 @@ bot.command("del", async (ctx) => {
     return;
   }
 
-  await kv.delete(["webhooks", ctx.chat.id, webhookUrl]);
-  await kv.delete(["status", ctx.chat.id, webhookUrl]);
-
-  const webhookEntry = await kv.get(["webhooks", ctx.chat.id, webhookUrl]);
-  if (webhookEntry.value === null) {
-    await ctx.reply("Webhook deleted successfully");
+  // remove webhook from ChatData
+  const existingChatDataQueryResult = await kv.get(["chats", ctx.chat.id]);
+  if (existingChatDataQueryResult.value) {
+    const chatData = existingChatDataQueryResult.value as ChatData;
+    const webhooksInChat = chatData.webhooks.filter((webhook) =>
+      webhook.webhookUrl === webhookUrl
+    );
+    if (webhooksInChat.length === 0) {
+      await ctx.reply(
+        "Webhook not found in your watchlist. Use /list to see your configured webhooks.",
+      );
+    } else {
+      const webhooksWithoutDeletedOne = chatData.webhooks.filter((webhook) =>
+        webhook.webhookUrl !== webhookUrl
+      );
+      await kv.set(["chats", ctx.chat.id], webhooksWithoutDeletedOne);
+      await ctx.reply("Webhook removed from your list");
+    }
   } else {
-    await ctx.reply("Webhook not found or could not be deleted");
+    await ctx.reply(
+      "Webhook not found in your watchlist. Use /list to see your configured webhooks.",
+    );
+  }
+
+  // remove webhook from WebhookData
+  const existingWebhookDataQueryResult = await kv.get(["webhooks", webhookUrl]);
+  if (existingWebhookDataQueryResult.value) {
+    const webhookData = existingWebhookDataQueryResult.value as WebhookData;
+    const chatsWithWebhook = webhookData.chats.filter((chatId) =>
+      chatId !== ctx.chat.id
+    );
+    if (chatsWithWebhook.length === 0) {
+      await kv.delete(["webhooks", webhookUrl]);
+    } else {
+      await kv.set(["webhooks", webhookUrl], chatsWithWebhook);
+    }
   }
 });
 
@@ -113,43 +205,48 @@ await bot.api.setMyCommands([
 ]);
 
 // Function to check other bots
-async function checkOtherBots() {
+async function checkBotsOnlineStatus() {
+  // docs say that kv.list() has a limit of 1000 items, so this might eventually break
+  // https://docs.deno.com/deploy/kv/manual/transactions/#limits
   const webhooks = kv.list({ prefix: ["webhooks"] });
+  const promises: Promise<TextMessage>[] = [];
   for await (const entry of webhooks) {
-    const [, chatId, webhookUrl] = entry.key;
-    const isOnline = await isWebhookOnline(webhookUrl as string);
+    const webhookUrl = entry.key[1] as string;
+    const webhookData = entry.value as WebhookData;
+    const wasOnline = webhookData.isOnline;
+    const isOnline = await isWebhookOnline(webhookUrl);
 
-    const statusEntry = await kv.get(["status", chatId, webhookUrl]);
-    const wasOnline = statusEntry.value as boolean | undefined;
+    if (wasOnline !== isOnline) {
+      webhookData.isOnline = isOnline;
+      await kv.set(["webhooks", webhookUrl], webhookData);
+    }
 
-    await kv.set(["status", chatId, webhookUrl], isOnline);
-
-    if (wasOnline === undefined) {
-      await bot.api.sendMessage(
-        chatId as number,
-        `Bot ${String(webhookUrl)} is ${isOnline ? "online" : "offline"}.`,
-      );
-    } else if (!wasOnline && isOnline) {
-      await bot.api.sendMessage(
-        chatId as number,
-        `🥳 Bot ${String(webhookUrl)} is back online!`,
-      );
+    if (!wasOnline && isOnline) {
+      for (const chatId of webhookData.chats) {
+        promises.push(bot.api.sendMessage(
+          chatId,
+          `🥳 Bot ${webhookUrl} is back online!`,
+        ));
+      }
     } else if (wasOnline && !isOnline) {
-      await bot.api.sendMessage(
-        chatId as number,
-        `💀 Bot ${String(webhookUrl)} is offline!`,
-      );
+      for (const chatId of webhookData.chats) {
+        promises.push(bot.api.sendMessage(
+          chatId,
+          `💀 Bot ${webhookUrl} is offline!`,
+        ));
+      }
     }
   }
+  await Promise.all(promises);
 }
 
 // Run the check every 5 minutes
 Deno.cron("Check other bots", "*/5 * * * *", () => {
-  checkOtherBots();
+  checkBotsOnlineStatus();
 });
 
 // Webhook setup for Deno Deploy
-const WEBHOOK_URL =  Deno.env.get("WEBHOOK_URL");
+const WEBHOOK_URL = Deno.env.get("WEBHOOK_URL");
 
 if (!WEBHOOK_URL) {
   // local environment: long-polling

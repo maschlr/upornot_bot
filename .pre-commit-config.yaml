@@ -1,8 +1,10 @@
 repos:
-- repo: local
-  hooks:
-  - id: encrypt-config
-    name: Encrypt Config File
-    entry: deno run --allow-all encrypt-config.ts
-    language: system
-    pass_filenames: false
+  - repo: local
+    hooks:
+      - id: deno-fmt
+        name: Deno Format
+        entry: deno fmt
+        language: system
+        types: [file]
+        files: \.(js|ts|jsx|tsx)$
+        pass_filenames: true
