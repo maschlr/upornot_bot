@@ -175,7 +175,9 @@ bot.command("del", async (ctx) => {
       const webhooksWithoutDeletedOne = chatData.webhooks.filter((webhook) =>
         webhook.webhookUrl !== webhookUrl
       );
-      await kv.set(["chats", ctx.chat.id], webhooksWithoutDeletedOne);
+      await kv.set(["chats", ctx.chat.id], {
+        webhooks: webhooksWithoutDeletedOne,
+      });
       await ctx.reply("Webhook removed from your list");
     }
   } else {
