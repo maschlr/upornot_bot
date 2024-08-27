@@ -58,11 +58,23 @@ bot.command("list", async (ctx) => {
   const webhooks = kv.list({ prefix: ["webhooks", ctx.chat.id] });
   let message = "Registered webhooks:\n";
   let count = 0;
+
   for await (const entry of webhooks) {
     const webhook = entry.value as { url: string };
-    message += `${webhook.url}\n`;
+    const statusEntry = await kv.get(["status", ctx.chat.id, webhook.url]);
+    const status = statusEntry.value as boolean | undefined;
+
+    let statusEmoji;
+    if (status === undefined) {
+      statusEmoji = "⚪"; // White circle for undefined (no check yet)
+    } else {
+      statusEmoji = status ? "🟢" : "🔴"; // Green for online, red for offline
+    }
+
+    message += `${statusEmoji} ${webhook.url}\n`;
     count++;
   }
+
   if (count === 0) {
     await ctx.reply("You have no registered webhooks.");
   } else {
