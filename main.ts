@@ -24,7 +24,8 @@ interface WebhookData {
 }
 
 // Helper function to check if a webhook is online
-async function isWebhookOnline(url: string): Promise<boolean> {
+async function isWebhookOnline(hostnameWithPath: string): Promise<boolean> {
+  const url = `https://${hostnameWithPath}`;
   try {
     const response = await fetch(url);
     return response.status === 405;
@@ -51,11 +52,6 @@ bot.command("add", async (ctx: Context) => {
     await ctx.reply("Error: Unable to process your request.");
     return;
   }
-  const isOnline = await isWebhookOnline(webhookUrlInput);
-  if (!isOnline) {
-    await ctx.reply("The provided webhook is not online or invalid");
-    return;
-  }
 
   // if user inputs url with http:// or http(s)://, remove it (normalize)
   let webhookUrl: string;
@@ -65,6 +61,13 @@ bot.command("add", async (ctx: Context) => {
   } catch {
     webhookUrl = webhookUrlInput;
   }
+
+  const isOnline = await isWebhookOnline(webhookUrl);
+  if (!isOnline) {
+    await ctx.reply("The provided webhook is not online or invalid");
+    return;
+  }
+
   const webhookKey = ["webhooks", webhookUrl];
   const existingWebhookData = await kv.get(webhookKey);
   if (!existingWebhookData.value) {
@@ -131,7 +134,7 @@ bot.command("list", async (ctx) => {
     if (name === webhookUrl) {
       message += `${statusEmoji} ${name}\n`;
     } else {
-      message += `${statusEmoji} ${name} (@${webhookUrl})\n`;
+      message += `${statusEmoji} ${name} (${webhookUrl})\n`;
     }
     count++;
 
