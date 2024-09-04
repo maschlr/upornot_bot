@@ -23,15 +23,13 @@ interface WebhookData {
   chats: number[];
 }
 
-const ERROR_CODES = [405, 502];
-
 // Helper function to check if a webhook is online
 async function isWebhookOnline(hostnameWithPath: string): Promise<boolean> {
   const url = `http://${hostnameWithPath}`;
 
   try {
     const response = await fetch(url);
-    return ERROR_CODES.includes(response.status);
+    return isFinite(response.status);
   } catch {
     return false;
   }
