@@ -76,7 +76,7 @@ bot.command("add", async (ctx: Context) => {
   if (!existingWebhookData.value) {
     // add new webhook
     const newWebhookData: WebhookData = {
-      isOnline: false,
+      isOnline: true,
       chats: [ctx.chat.id],
     };
     await kv.set(webhookKey, newWebhookData);
@@ -248,21 +248,21 @@ async function checkBotsOnlineStatus() {
   await Promise.all(promises);
 }
 
-// Run the check every 5 minutes
-Deno.cron("Check other bots", "*/5 * * * *", () => {
-  checkBotsOnlineStatus();
-});
-
 // Webhook setup for Deno Deploy
 const WEBHOOK_URL = Deno.env.get("WEBHOOK_URL");
 
 if (!WEBHOOK_URL) {
   // local environment: long-polling
+  await bot.api.deleteWebhook();
   bot.start();
 } else {
   // Set the webhook
   await bot.api.setWebhook(WEBHOOK_URL);
   // Start the bot
+  // Run the check every 5 minutes
+  Deno.cron("Check other bots", "*/5 * * * *", () => {
+    checkBotsOnlineStatus();
+  });
   Deno.serve(webhookCallback(bot, "std/http"));
 }
 
