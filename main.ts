@@ -28,8 +28,11 @@ async function isWebhookOnline(hostnameWithPath: string): Promise<boolean> {
   const url = `http://${hostnameWithPath}`;
 
   try {
-    const response = await fetch(url);
-    return isFinite(response.status);
+    const response = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    return response.ok;
   } catch {
     return false;
   }
