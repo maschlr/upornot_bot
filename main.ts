@@ -32,7 +32,7 @@ async function isWebhookOnline(hostnameWithPath: string): Promise<boolean> {
       method: "POST",
       body: JSON.stringify({}),
     });
-    return response.ok;
+    return isFinite(response.status);
   } catch {
     return false;
   }
